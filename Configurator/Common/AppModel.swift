@@ -13,7 +13,7 @@ import RealityKit
 import CloudXRKit
 
 struct SavedSettings {
-    @AppStorage("application") static var application: Application = .purse_rel
+    @AppStorage("application") static var application: Application = .omniverse
 }
 
 /// The data that the app uses to configure its views.

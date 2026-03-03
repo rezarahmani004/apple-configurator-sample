@@ -48,6 +48,8 @@ public class ConfiguratorAppModel {
 
         case Application.purse_rel:
             asset = PurseAsset()
+        case Application.omniverse:
+            asset = GenericOmniverseAsset()
         default:
             fatalError("Unknown application type")
         }

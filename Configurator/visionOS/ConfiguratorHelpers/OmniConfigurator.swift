@@ -50,6 +50,16 @@ struct OmniConfigurator: View {
 
     @Binding var application: Application
 
+    /// True when the connected asset has configurable styles or environments to show.
+    var hasConfigurableContent: Bool {
+        !configuratorAppModel.asset.styleList.isEmpty || !configuratorAppModel.asset.environments.isEmpty
+    }
+
+    /// True when the camera popover button should be shown (portal mode with available cameras).
+    var cameraButtonIsVisible: Bool {
+        configuratorViewModel.currentViewing.mode != .tabletop && !configuratorAppModel.asset.exteriorCameras.isEmpty
+    }
+
     var body: some View {
 #if DEBUG
         let _ = Self._printChanges()
@@ -60,15 +70,17 @@ struct OmniConfigurator: View {
                 .padding(.all)
 
             // decide which panel to show in this window
-            switch section {
-            case .configure:
-                ConfigureView()
-            case .environment:
-                EnvironmentView()
-            case .hud:
-                if let session = configuratorAppModel.session {
-                    ScrollView {
-                        HUDView(session: session, hudConfig: HUDConfig())
+            if hasConfigurableContent {
+                switch section {
+                case .configure:
+                    ConfigureView()
+                case .environment:
+                    EnvironmentView()
+                case .hud:
+                    if let session = configuratorAppModel.session {
+                        ScrollView {
+                            HUDView(session: session, hudConfig: HUDConfig())
+                        }
                     }
                 }
             }
@@ -76,10 +88,12 @@ struct OmniConfigurator: View {
         .ornament(visibility: .visible, attachmentAnchor: .scene(.init(x: 0.5, y: 0.92))) {
             // view selection "tabs" along the bottom of the window
             HStack {
-                Button("Configure") { section = .configure }
-                    .selectedStyle(isSelected: section == .configure)
-                Button("Environment") { section = .environment }
-                    .selectedStyle(isSelected: section == .environment)
+                if hasConfigurableContent {
+                    Button("Configure") { section = .configure }
+                        .selectedStyle(isSelected: section == .configure)
+                    Button("Environment") { section = .environment }
+                        .selectedStyle(isSelected: section == .environment)
+                }
                 Button {
                     showDebugPopup = true
                 } label: {
@@ -151,7 +165,7 @@ struct OmniConfigurator: View {
 
             VStack{
                 // Title
-                Text(section.title)
+                Text(hasConfigurableContent ? section.title : "Streaming")
                     .font(UIConstants.titleFont)
 
                 Button(appModel.ratingText) {
@@ -165,7 +179,7 @@ struct OmniConfigurator: View {
 
             Spacer()
 
-            // Camera popover
+            // Camera popover - only shown when exterior cameras are available
             Button {
                 showCameras.toggle()
             } label: {
@@ -182,8 +196,8 @@ struct OmniConfigurator: View {
                 }
             }
             // we need both of the below since we want the invisible menu to be disabled as well
-            .opacity(configuratorViewModel.currentViewing.mode == .tabletop ? 0 : 1)
-            .disabled(configuratorViewModel.currentViewing.mode == .tabletop)
+            .opacity(cameraButtonIsVisible ? 1 : 0)
+            .disabled(!cameraButtonIsVisible)
             // popover sheet presented when the camera icon is tapped
             .popover(isPresented: $showCameras) {
                 CameraSheet()
