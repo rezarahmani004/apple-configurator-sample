@@ -57,8 +57,7 @@ enum AppID: UInt, CaseIterable {
 
 enum Application: String, CaseIterable {
     case purse_rel = "Purse Configurator"
-
-
+    case omniverse = "Omniverse Viewer"
 
     var appID: AppID {
         switch self {

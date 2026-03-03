@@ -108,7 +108,7 @@ struct SessionConfigView: View {
     @ViewBuilder
     private var simpleConfigView: some View {
         VStack(alignment: .center) {
-            Text("NVIDIA Omniverse Configurator")
+            Text("NVIDIA Omniverse Viewer")
                 .font(.title)
                 .padding(.top, 240)
         }
@@ -116,7 +116,7 @@ struct SessionConfigView: View {
             zone = .us_west
             authMethod = .guest
             resolutionPreset = .standardPreset
-            application = .purse_rel
+            application = .omniverse
         }
         .frame(maxWidth: .infinity, minHeight: 360)
     }
