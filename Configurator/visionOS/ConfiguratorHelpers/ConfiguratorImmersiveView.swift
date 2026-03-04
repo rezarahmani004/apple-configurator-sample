@@ -54,14 +54,18 @@ struct ConfiguratorImmersiveView: View {
             cameraAnchor = Entity()
             content.add(cameraAnchor)
             cameraAnchor.addChild(makeInvisibleGestureWall())
+
+            // Add a moving 3D object to the scene
+            content.add(makeMovingObject())
+
             _ = content.subscribe(to:SceneEvents.Update.self,on: nil, componentType: nil) { frameData in
                 if configuratorViewModel.viewIsLoading != configuratorAppModel.isAwaitingCompletion(viewingKey) {
                     configuratorViewModel.viewIsLoading = configuratorAppModel.isAwaitingCompletion(viewingKey)
                 }
                 
-                let purseVisibility = (configuratorAppModel.asset["purseVisibility"] as? PurseVisibility == PurseVisibility.visible)
-                if configuratorViewModel.purseVisible != purseVisibility {
-                    configuratorViewModel.purseVisible = purseVisibility
+                let objectVisible = (configuratorAppModel.asset["objectVisibility"] as? GenericObjectVisibility == GenericObjectVisibility.visible)
+                if configuratorViewModel.objectVisible != objectVisible {
+                    configuratorViewModel.objectVisible = objectVisible
                 }
             
                 if let currentViewing = configuratorAppModel.asset[viewingKey] as? ViewingModel,
@@ -106,5 +110,44 @@ struct ConfiguratorImmersiveView: View {
         plane.components.set(collision)
         plane.position.z = -20
         return plane
+    }
+
+    /// Creates a local RealityKit sphere that continuously orbits in the immersive space,
+    /// providing a moving 3D object independent of the remote CloudXR scene.
+    func makeMovingObject() -> Entity {
+        // Container that rotates, causing the sphere child to orbit around the container's origin
+        let orbitContainer = Entity()
+        orbitContainer.name = "MovingObjectContainer"
+        orbitContainer.position = SIMD3<Float>(0, 1.5, -2.5)
+
+        // Sphere positioned offset from container center so it orbits visibly
+        var material = PhysicallyBasedMaterial()
+        material.baseColor = .init(tint: .init(red: 1.0, green: 0.5, blue: 0.0, alpha: 1.0))
+        material.roughness = .init(floatLiteral: 0.3)
+        material.metallic = .init(floatLiteral: 0.7)
+        let sphere = ModelEntity(mesh: .generateSphere(radius: 0.04), materials: [material])
+        sphere.name = "MovingObjectSphere"
+        sphere.position = SIMD3<Float>(0.3, 0, 0)
+        orbitContainer.addChild(sphere)
+
+        // Animate the container with a full rotation so the sphere orbits the container origin
+        let fromTransform = Transform()
+        var toTransform = Transform()
+        toTransform.rotation = simd_quatf(angle: .pi * 2, axis: [0, 1, 0])
+
+        if let orbitAnimation = try? AnimationResource.generate(with: FromToByAnimation(
+            name: "orbit",
+            from: fromTransform,
+            to: toTransform,
+            duration: 4.0,
+            timing: .linear,
+            isAdditive: false,
+            repeatMode: .repeat,
+            bindTarget: .transform
+        )) {
+            orbitContainer.playAnimation(orbitAnimation)
+        }
+
+        return orbitContainer
     }
 }

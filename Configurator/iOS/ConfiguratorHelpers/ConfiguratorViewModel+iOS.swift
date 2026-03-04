@@ -30,8 +30,8 @@ class ConfiguratorViewModel {
     }
 
     // Asset states
-    var purseVisible = true
-    var purseRotated = false
+    var objectVisible = true
+    var objectRotated = false
 
 
     var lightIntensity: Float = 1.0

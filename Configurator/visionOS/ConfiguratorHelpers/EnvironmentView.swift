@@ -139,7 +139,7 @@ extension View {
     @Previewable @State var configuratorViewModel = ConfiguratorViewModel()
     @Previewable @State var configuratorAppModel = ConfiguratorAppModel()
 
-    appModel.application = .purse_rel
+    appModel.application = .generic_scene
     appModel.session = CloudXRSession(config: Config())
 
     configuratorAppModel

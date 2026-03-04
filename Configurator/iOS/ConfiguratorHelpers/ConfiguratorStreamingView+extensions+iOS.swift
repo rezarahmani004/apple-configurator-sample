@@ -291,8 +291,8 @@ extension ConfiguratorStreamingView {
     }
 
     private func getConfigureText() -> String {
-        if configuratorAppModel.asset is PurseAsset {
-            return "Configure Purse"
+        if configuratorAppModel.asset is GenericSceneAsset {
+            return "Configure Scene"
         }
 
 
@@ -343,8 +343,8 @@ extension ConfiguratorStreamingView {
     }
 
     private func getColorText() -> String {
-        if configuratorAppModel.asset is PurseAsset {
-            return "Leather Color"
+        if configuratorAppModel.asset is GenericSceneAsset {
+            return "Material Color"
         }
 
 

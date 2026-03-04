@@ -24,7 +24,7 @@ public class ConfiguratorAppModel {
         }
     }
 
-    public var asset: AssetModel = PurseAsset()
+    public var asset: AssetModel = GenericSceneAsset()
 
     // simplifying wrapper methods for asset.stateManager; ideally nobody needs to know about
     // OmniverseStateManager
@@ -46,8 +46,8 @@ public class ConfiguratorAppModel {
     func setup(application: Application, configuratorViewModel: ConfiguratorViewModel, session: Session) {
         switch application {
 
-        case Application.purse_rel:
-            asset = PurseAsset()
+        case Application.generic_scene:
+            asset = GenericSceneAsset()
         default:
             fatalError("Unknown application type")
         }
