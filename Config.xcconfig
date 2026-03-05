@@ -8,9 +8,8 @@
 
 // Build configuration
 MARKETING_VERSION = 6.0.2
-OTHER_SWIFT_FLAGS = -DnotStrippedCar -DnotStrippedPurse -DnotStrippedGeneric -DnotStripped
-PRODUCT_BUNDLE_IDENTIFIER = com.nvidia.purse-config
+OTHER_SWIFT_FLAGS = -DnotStrippedGeneric -DnotStripped
+PRODUCT_BUNDLE_IDENTIFIER = com.nvidia.generic-configurator
 
 // App IDs
-PURSE_CONFIGURATOR_APP_ID = 103230632
 NISSAN_CONFIGURATOR_APP_ID = 102760311
