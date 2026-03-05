@@ -116,7 +116,7 @@ struct SessionConfigView: View {
             zone = .us_west
             authMethod = .guest
             resolutionPreset = .standardPreset
-            application = .purse_rel
+            application = .generic_scene
         }
         .frame(maxWidth: .infinity, minHeight: 360)
     }

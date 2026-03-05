@@ -56,7 +56,7 @@ enum AppID: UInt, CaseIterable {
 }
 
 enum Application: String, CaseIterable {
-    case purse_rel = "Purse Configurator"
+    case generic_scene = "Generic Scene Configurator"
 
 
 

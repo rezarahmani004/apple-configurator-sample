@@ -53,12 +53,12 @@ final class ConfiguratorTests: XCTestCase {
         XCTAssertTrue(configuratorViewModel.viewIsLoading)
     }
 
-    func testConnectingPurseWithScreenshot() async throws {
+    func testConnectingGenericSceneWithScreenshot() async throws {
         let session = CloudXRSession(config: CloudXRKit.Config())
 
-        TestHelper.appModel!.application = Application.purse_rel
+        TestHelper.appModel!.application = Application.generic_scene
         TestHelper.appModel!.session = session
-        TestHelper.configuratorAppModel!.asset = PurseAsset()
+        TestHelper.configuratorAppModel!.asset = GenericSceneAsset()
         let expectation = expectation(description: "Connecting")
         Task { @MainActor in
             try await session.connect()
@@ -66,7 +66,7 @@ final class ConfiguratorTests: XCTestCase {
                 try await Task.sleep(nanoseconds: 1_000_000_000)
             }
             // Signal to CI log scan that it's time to take a screenshot
-            Self.logger.info("screenshot--coat_purse_connecting_test")
+            Self.logger.info("screenshot--generic_scene_connecting_test")
             XCTAssertTrue(session.state == .connecting)
             try await Task.sleep(nanoseconds: 1_000_000_000 * 10)
             expectation.fulfill()

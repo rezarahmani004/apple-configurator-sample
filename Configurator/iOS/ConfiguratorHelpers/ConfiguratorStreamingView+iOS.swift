@@ -61,7 +61,7 @@ struct ConfiguratorStreamingView : View {
                 }
                 configuratorViewModel.sessionEntity = sessionEntity
 
-                // Set the inital purse location.
+                // Set the initial object location.
                 configuratorAppModel.gestureHelper?.translateRemoteWorldOrigin(To: configuratorViewModel.translationFromUser)
 
                 content.add(sessionEntity)
@@ -75,9 +75,9 @@ struct ConfiguratorStreamingView : View {
                         configuratorViewModel.viewIsLoading = configuratorAppModel.isAwaitingCompletion(viewingKey)
                     }
 
-                    let purseVisibility = (configuratorAppModel.asset["purseVisibility"] as? PurseVisibility == PurseVisibility.visible)
-                    if configuratorViewModel.purseVisible != purseVisibility {
-                        configuratorViewModel.purseVisible = purseVisibility
+                    let objectVisible = (configuratorAppModel.asset["objectVisibility"] as? GenericObjectVisibility == GenericObjectVisibility.visible)
+                    if configuratorViewModel.objectVisible != objectVisible {
+                        configuratorViewModel.objectVisible = objectVisible
                     }
 
                     if let currentViewing = configuratorAppModel.asset[viewingKey] as? ViewingModel,
@@ -190,7 +190,7 @@ struct ConfiguratorStreamingView : View {
     @Previewable @State var configuratorViewModel = ConfiguratorViewModel()
     @Previewable @State var configuratorAppModel = ConfiguratorAppModel()
 
-    appModel.application = .purse_rel
+    appModel.application = .generic_scene
     appModel.session = CloudXRSession(config: Config())
 
     configuratorAppModel

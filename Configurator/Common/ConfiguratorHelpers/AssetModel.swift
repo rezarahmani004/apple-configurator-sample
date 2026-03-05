@@ -74,8 +74,8 @@ public class AssetCamera: Identifiable, MessageProtocol {
 }
 
 /// Eventually, we will not need to subclass AssetModel, but will read all the data
-/// from an external source. For now though, we will subclass PurseAssetModel
-/// and CarAssetModel
+/// from an external source. For now though, we will subclass AssetModel
+/// and override as needed.
 public class AssetModel {
     /// The list of top-level styles (colors, what have you) applied to the model
     var styleList: [any AssetStyle]
