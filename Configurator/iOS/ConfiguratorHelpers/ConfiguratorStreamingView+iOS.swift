@@ -75,11 +75,6 @@ struct ConfiguratorStreamingView : View {
                         configuratorViewModel.viewIsLoading = configuratorAppModel.isAwaitingCompletion(viewingKey)
                     }
 
-                    let objectVisible = (configuratorAppModel.asset["objectVisibility"] as? GenericObjectVisibility == GenericObjectVisibility.visible)
-                    if configuratorViewModel.objectVisible != objectVisible {
-                        configuratorViewModel.objectVisible = objectVisible
-                    }
-
                     if let currentViewing = configuratorAppModel.asset[viewingKey] as? ViewingModel,
                        currentViewing != configuratorViewModel.currentViewing {
                          configuratorViewModel.currentViewing = currentViewing
