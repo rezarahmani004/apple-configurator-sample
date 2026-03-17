@@ -38,7 +38,6 @@ struct ConfiguratorImmersiveView: View {
             configuratorViewModel.sessionEntity = sessionEntity
             spinnerEntity = Entity()
             spinnerEntity.opacity = 1.0
-            content.add(spinnerEntity)
 
             sceneEntity.components[ViewingModeComponent.self] = .init(
                 configuratorAppModel: configuratorAppModel,
@@ -50,13 +49,9 @@ struct ConfiguratorImmersiveView: View {
 
             configuratorViewModel.sceneEntity = sceneEntity
 
-            content.add(sceneEntity)
             cameraAnchor = Entity()
             content.add(cameraAnchor)
             cameraAnchor.addChild(makeInvisibleGestureWall())
-
-            // Add a moving 3D object to the scene
-            content.add(makeMovingObject())
 
             _ = content.subscribe(to:SceneEvents.Update.self,on: nil, componentType: nil) { frameData in
                 if configuratorViewModel.viewIsLoading != configuratorAppModel.isAwaitingCompletion(viewingKey) {
@@ -77,6 +72,35 @@ struct ConfiguratorImmersiveView: View {
                 }
             }
         } update: { content, attachments in
+            let isConnected = configuratorAppModel.session?.state == .connected
+            if isConnected {
+                // Connected: render only the CloudXR stream via sessionEntity.
+                // Guard each call so actual add/remove only fires on the transition.
+                if sceneEntity.scene != nil {
+                    content.remove(sceneEntity)
+                }
+                if spinnerEntity.scene != nil {
+                    content.remove(spinnerEntity)
+                }
+                if sessionEntity.scene == nil {
+                    content.add(sessionEntity)
+                }
+            } else {
+                // Not connected: restore local scene setup.
+                // Only remove sessionEntity when it was directly added (connected mode),
+                // i.e., when sceneEntity is absent from the scene. If sceneEntity is
+                // already present, sessionEntity is its child (managed by ViewingModeSystem)
+                // and must not be removed here.
+                if sceneEntity.scene == nil && sessionEntity.scene != nil {
+                    content.remove(sessionEntity)
+                }
+                if spinnerEntity.scene == nil {
+                    content.add(spinnerEntity)
+                }
+                if sceneEntity.scene == nil {
+                    content.add(sceneEntity)
+                }
+            }
             if let session = configuratorAppModel.session {
                 placementManager.update(session: session, content: content, attachments: attachments)
             }
@@ -110,44 +134,5 @@ struct ConfiguratorImmersiveView: View {
         plane.components.set(collision)
         plane.position.z = -20
         return plane
-    }
-
-    /// Creates a local RealityKit sphere that continuously orbits in the immersive space,
-    /// providing a moving 3D object independent of the remote CloudXR scene.
-    func makeMovingObject() -> Entity {
-        // Container that rotates, causing the sphere child to orbit around the container's origin
-        let orbitContainer = Entity()
-        orbitContainer.name = "MovingObjectContainer"
-        orbitContainer.position = SIMD3<Float>(0, 1.5, -2.5)
-
-        // Sphere positioned offset from container center so it orbits visibly
-        var material = PhysicallyBasedMaterial()
-        material.baseColor = .init(tint: .init(red: 1.0, green: 0.5, blue: 0.0, alpha: 1.0))
-        material.roughness = .init(floatLiteral: 0.3)
-        material.metallic = .init(floatLiteral: 0.7)
-        let sphere = ModelEntity(mesh: .generateSphere(radius: 0.04), materials: [material])
-        sphere.name = "MovingObjectSphere"
-        sphere.position = SIMD3<Float>(0.3, 0, 0)
-        orbitContainer.addChild(sphere)
-
-        // Animate the container with a full rotation so the sphere orbits the container origin
-        let fromTransform = Transform()
-        var toTransform = Transform()
-        toTransform.rotation = simd_quatf(angle: .pi * 2, axis: [0, 1, 0])
-
-        if let orbitAnimation = try? AnimationResource.generate(with: FromToByAnimation(
-            name: "orbit",
-            from: fromTransform,
-            to: toTransform,
-            duration: 4.0,
-            timing: .linear,
-            isAdditive: false,
-            repeatMode: .repeat,
-            bindTarget: .transform
-        )) {
-            orbitContainer.playAnimation(orbitAnimation)
-        }
-
-        return orbitContainer
     }
 }
