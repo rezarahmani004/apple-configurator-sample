@@ -23,6 +23,10 @@ struct ConfiguratorImmersiveView: View {
 
     @State private var cameraAnchor = Entity()
     @State private var placementManager = PlacementManager()
+
+    /// Holds the local decorative moving object so it can be hidden when the
+    /// CloudXR session is connected (stream-only mode) and shown otherwise.
+    @State private var movingObjectEntity = Entity()
     
     var body: some View {
         RealityView { content, attachments in
@@ -55,8 +59,9 @@ struct ConfiguratorImmersiveView: View {
             content.add(cameraAnchor)
             cameraAnchor.addChild(makeInvisibleGestureWall())
 
-            // Add a moving 3D object to the scene
-            content.add(makeMovingObject())
+            // Add a local decorative moving 3D object; hidden once CloudXR connects (stream-only mode)
+            movingObjectEntity = makeMovingObject()
+            content.add(movingObjectEntity)
 
             _ = content.subscribe(to:SceneEvents.Update.self,on: nil, componentType: nil) { frameData in
                 if configuratorViewModel.viewIsLoading != configuratorAppModel.isAwaitingCompletion(viewingKey) {
@@ -93,8 +98,13 @@ struct ConfiguratorImmersiveView: View {
             if newState == .connected {
                 configuratorAppModel.asset.stateManager.startPolling()
                 configuratorAppModel.asset.resync()
+                // Stream-only mode: hide the local decorative object so only the
+                // remote CloudXR stream is visible in the immersive space.
+                movingObjectEntity.isEnabled = false
             } else {
                 configuratorAppModel.asset.stateManager.stopPolling()
+                // Not connected: restore the local decorative object.
+                movingObjectEntity.isEnabled = true
             }
         }
     }
