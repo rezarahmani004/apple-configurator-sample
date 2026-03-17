@@ -23,6 +23,13 @@ struct ConfiguratorImmersiveView: View {
 
     @State private var cameraAnchor = Entity()
     @State private var placementManager = PlacementManager()
+
+    // MARK: - Stream-only mode gate
+    // Derived from existing session state: when true, only the remote CloudXR
+    // stream is shown and all local decorative content is suppressed.
+    private var isConnected: Bool {
+        configuratorAppModel.session?.state == .connected
+    }
     
     var body: some View {
         RealityView { content, attachments in
@@ -36,27 +43,50 @@ struct ConfiguratorImmersiveView: View {
                 sessionEntity.components[CloudXRSessionComponent.self] = .init(session: session)
             }
             configuratorViewModel.sessionEntity = sessionEntity
-            spinnerEntity = Entity()
-            spinnerEntity.opacity = 1.0
-            content.add(spinnerEntity)
 
-            sceneEntity.components[ViewingModeComponent.self] = .init(
-                configuratorAppModel: configuratorAppModel,
-                configuratorViewModel: configuratorViewModel,
-                cloudXrEntity: sessionEntity,
-                spinnerEntity: spinnerEntity
-            )
-            sceneEntity.components[OpacityComponent.self] = .init(opacity: 0.0)
+            // MARK: CloudXR session entity
+            // Always add the session entity: it is the attachment point for the
+            // remote Omniverse / CloudXR stream and must be present in every state.
+            content.add(sessionEntity)
 
-            configuratorViewModel.sceneEntity = sceneEntity
-
-            content.add(sceneEntity)
+            // MARK: Invisible gesture wall
+            // The gesture-capture plane contains no visible geometry, so it is
+            // safe to keep in all states (including connected / stream-only mode).
             cameraAnchor = Entity()
             content.add(cameraAnchor)
             cameraAnchor.addChild(makeInvisibleGestureWall())
 
-            // Add a moving 3D object to the scene
-            content.add(makeMovingObject())
+            // MARK: Local decorative content – suppressed when connected
+            // Before this change these entities were added unconditionally, which
+            // caused the local template scene to overlap the remote stream once
+            // CloudXR became active.  They are now only added while not yet
+            // connected so that the connected state shows only the remote stream.
+
+            // Always initialize the sceneEntity reference on the view-model so that
+            // downstream consumers of configuratorViewModel.sceneEntity receive a
+            // valid (if empty) entity even when the view launches in the connected state.
+            configuratorViewModel.sceneEntity = sceneEntity
+
+            if !isConnected {
+                spinnerEntity = Entity()
+                spinnerEntity.opacity = 1.0
+                content.add(spinnerEntity)
+
+                sceneEntity.components[ViewingModeComponent.self] = .init(
+                    configuratorAppModel: configuratorAppModel,
+                    configuratorViewModel: configuratorViewModel,
+                    cloudXrEntity: sessionEntity,
+                    spinnerEntity: spinnerEntity
+                )
+                sceneEntity.components[OpacityComponent.self] = .init(opacity: 0.0)
+
+                // Local scene root – only added to content when not connected to avoid
+                // overlapping the remote stream once CloudXR becomes active.
+                content.add(sceneEntity)
+
+                // Local animated decorative sphere – omitted when connected.
+                content.add(makeMovingObject())
+            }
 
             _ = content.subscribe(to:SceneEvents.Update.self,on: nil, componentType: nil) { frameData in
                 if configuratorViewModel.viewIsLoading != configuratorAppModel.isAwaitingCompletion(viewingKey) {
@@ -77,11 +107,16 @@ struct ConfiguratorImmersiveView: View {
                 }
             }
         } update: { content, attachments in
-            if let session = configuratorAppModel.session {
+            // MARK: Placement updates – suppressed when connected
+            // Placement is a local-content feature; running it while the remote
+            // stream is active could reintroduce local overlays.
+            if !isConnected, let session = configuratorAppModel.session {
                 placementManager.update(session: session, content: content, attachments: attachments)
             }
         } attachments: {
-            if configuratorViewModel.isPlacing {
+            // MARK: Placement attachments – suppressed when connected
+            // Same reasoning as placement updates above.
+            if !isConnected && configuratorViewModel.isPlacing {
                 placementManager.attachments()
             }
         }
