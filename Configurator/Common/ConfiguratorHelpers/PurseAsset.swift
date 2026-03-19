@@ -12,6 +12,29 @@ import Foundation
 
 let setPurseVariantEventType = "setVariantSelection"
 
+// MARK: - Temporary state bridge for projects where ConfiguratorViewModel
+// does not already define purseVisible / purseRotated.
+// This fixes compile errors like:
+// "Value of type 'ConfiguratorViewModel' has no member 'purseVisible'"
+// and
+// "Value of type 'ConfiguratorViewModel' has no member 'purseRotated'"
+private enum PurseUIStateKeys {
+    static let purseVisible = "purseVisible"
+    static let purseRotated = "purseRotated"
+}
+
+extension ConfiguratorViewModel {
+    var purseVisible: Bool {
+        get { UserDefaults.standard.object(forKey: PurseUIStateKeys.purseVisible) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: PurseUIStateKeys.purseVisible) }
+    }
+
+    var purseRotated: Bool {
+        get { UserDefaults.standard.object(forKey: PurseUIStateKeys.purseRotated) as? Bool ?? false }
+        set { UserDefaults.standard.set(newValue, forKey: PurseUIStateKeys.purseRotated) }
+    }
+}
+
 class PurseCamera: AssetCamera {
     init(_ ovName: String = "") {
         super.init(
@@ -276,7 +299,6 @@ public class PursePlacement: AssetAction {
             helpText: {
                 if Self.isSimulator {
                     Self.placementNotInSimulator
-
                 } else if configuratorViewModel.currentViewing.mode == .portal {
                     Self.placementPortalHelp
                 } else if configuratorViewModel.isPlacing {
