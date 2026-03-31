@@ -11,14 +11,12 @@
 import SwiftUI
 import RealityKit
 
-/// The data that the app uses to configure its views.
 @Observable
 class ConfiguratorViewModel: Placeable {
     var sessionEntity: Entity?
 
-    // Note that we only want to set currentViewing and viewIsLoading if their values have changed,
-    // since setting these members, even if they already have the passed value, can trigger a UI refresh
-    // Viewing Mode
+    // MARK: - Viewing Mode
+
     var currentViewing = ViewingModel(.portal) {
         willSet {
             assert(currentViewing != newValue)
@@ -33,37 +31,123 @@ class ConfiguratorViewModel: Placeable {
 
     var objectVisible = true
     var objectRotated = false
-
-
     var lightIntensity: Float = 1.0
 
-
     var sceneEntity: Entity?
-    // placement
+
+    // MARK: - Placement
+
     var placementState: PlacementManager.State = .none
     var placementPosition = simd_float3()
     var placementOrientation = simd_quatf.identity
 
-    // gesture related
+    // MARK: - Gesture Related
+
     var lastLocation = vector_float3.zero
     var lastScale = Float(1)
     var lastRotation = Float.zero
     var modelRotationRadians = Float.zero
     var currentGesture = CurrentGesture.none
-}
 
+    // MARK: - Exact Keys from Inputs.csv
+
+    let key_P_IT_rack = "P_IT_rack"
+    let key_Altitude = "Altitude"
+    let key_T_Ambient = "T_Ambient"
+    let key_Fan_Speed = "Fan_ Speed"
+    let key_Auto_Actions = "Auto_Actions"
+
+    // MARK: - Simulation Inputs
+
+    var P_IT_rack: Double = 1000
+    var Altitude: Double = 0
+    var T_Ambient: Double = 40
+    var Fan_Speed: Double = 400
+    var Auto_Actions: Bool = false
+
+    // MARK: - Input Limits from Inputs.csv
+
+    let min_P_IT_rack: Double = 200
+    let max_P_IT_rack: Double = 1000
+    let step_P_IT_rack: Double = 100
+
+    let min_Altitude: Double = 0
+    let max_Altitude: Double = 2000
+    let step_Altitude: Double = 500
+
+    let min_T_Ambient: Double = 0
+    let max_T_Ambient: Double = 45
+    let step_T_Ambient: Double = 5
+
+    let min_Fan_Speed: Double = 75
+    let max_Fan_Speed: Double = 500
+    let step_Fan_Speed: Double = 25
+
+    // MARK: - Defaults from Inputs.csv
+
+    let default_P_IT_rack: Double = 1000
+    let default_Altitude: Double = 0
+    let default_T_Ambient: Double = 40
+    let default_Fan_Speed: Double = 400
+    let default_Auto_Actions: Bool = false   // "no" in CSV
+
+    // MARK: - Simulation UI State
+
+    var hasUnsavedSimulationChanges: Bool = false
+    var simulationStatusText: String = "Ready"
+    var lastSimulationAction: String = "None"
+}
 
 extension ConfiguratorViewModel {
     func wasTapped() {
-        // called when model is placed at placementPosition
-        // Need something like ImmersiveView.dragPortal() since it translates the model
         if let sessionEntity = sessionEntity {
             sessionEntity.position = placementPosition
         }
     }
 }
 
-// stolen from CloudXRKit - statics need to be separately declared public, it seems
+extension ConfiguratorViewModel {
+    // MARK: - Simulation Helpers
+
+    func markSimulationInputsChanged() {
+        hasUnsavedSimulationChanges = true
+        simulationStatusText = "Parameters changed locally"
+    }
+
+    func resetSimulationInputsToDefaults() {
+        P_IT_rack = default_P_IT_rack
+        Altitude = default_Altitude
+        T_Ambient = default_T_Ambient
+        Fan_Speed = default_Fan_Speed
+        Auto_Actions = default_Auto_Actions
+
+        hasUnsavedSimulationChanges = true
+        simulationStatusText = "Defaults restored locally"
+        lastSimulationAction = "Reset Defaults"
+    }
+
+    func applySimulationInputsLocally() {
+        hasUnsavedSimulationChanges = false
+        simulationStatusText = "Ready to send parameters to Omniverse"
+        lastSimulationAction = "Apply"
+    }
+
+    func markSteadyStateRequested() {
+        simulationStatusText = "Steady-state simulation requested"
+        lastSimulationAction = "Run Steady State"
+    }
+
+    func markTransientStartRequested() {
+        simulationStatusText = "Transient simulation start requested"
+        lastSimulationAction = "Start Transient"
+    }
+
+    func markTransientStopRequested() {
+        simulationStatusText = "Transient simulation stop requested"
+        lastSimulationAction = "Stop Transient"
+    }
+}
+
 public extension simd_float4x4 {
     static var identity: simd_float4x4 { matrix_identity_float4x4 }
     static var zero: simd_float4x4 { simd_float4x4() }

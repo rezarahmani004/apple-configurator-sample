@@ -1144,8 +1144,6 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section *//* End XCLocalSwiftPackageReference section */
-
 /* Begin XCRemoteSwiftPackageReference section */
 		C5E3A0502F1AF9E3001D89F3 /* XCRemoteSwiftPackageReference "cloudxr-framework" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1161,7 +1159,8 @@
 		01C927EB2CB9BF64006D4D8D /* CloudXRKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CloudXRKit;
-		};		9CAEE0BD2D307CF90030E3F6 /* CloudXRKit */ = {
+		};
+		9CAEE0BD2D307CF90030E3F6 /* CloudXRKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CloudXRKit;
 		};

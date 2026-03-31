@@ -73,9 +73,7 @@ struct OmniConfigurator: View {
                 case .configure:
                     VStack {
                         Spacer(minLength: 10)
-
-                        centerBrandingPanel
-
+                        centerContentPanel
                         Spacer()
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -221,9 +219,9 @@ struct OmniConfigurator: View {
         }
     }
 
-    // MARK: - Center Panel
+    // MARK: - Center Content Panel
 
-    var centerBrandingPanel: some View {
+    var centerContentPanel: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 42, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -250,56 +248,34 @@ struct OmniConfigurator: View {
                 .shadow(color: nvidiaGreen.opacity(0.16), radius: 22, y: 0)
                 .shadow(color: Color.black.opacity(0.38), radius: 30, y: 18)
 
-            VStack(spacing: 28) {
-                Spacer(minLength: 10)
-
-                ZStack {
-                    RadialGradient(
-                        colors: [
-                            nvidiaHighlight.opacity(0.22),
-                            nvidiaGreen.opacity(0.14),
-                            Color.clear
-                        ],
-                        center: .center,
-                        startRadius: 20,
-                        endRadius: 220
-                    )
-                    .frame(width: 460, height: 180)
-                    .blur(radius: 26)
-
-                    VStack(spacing: 18) {
-                        brandedTitle(fontSize: 56)
-
-                        Image("omnicool_logo")
-                            .resizable()
-                            .interpolation(.high)
-                            .antialiased(true)
-                            .scaledToFit()
-                            .frame(maxWidth: 520)
-                            .contrast(1.12)
-                            .saturation(1.06)
-                            .shadow(color: nvidiaGreen.opacity(0.18), radius: 18, y: 0)
-                            .shadow(color: Color.black.opacity(0.40), radius: 14, y: 8)
-                    }
-                }
-
-                Image("bottom_logos")
-                    .resizable()
-                    .interpolation(.high)
-                    .antialiased(true)
-                    .scaledToFit()
-                    .frame(maxWidth: 560)
-                    .contrast(1.12)
-                    .saturation(1.04)
-                    .shadow(color: Color.black.opacity(0.34), radius: 12, y: 7)
-
-                Spacer(minLength: 8)
+            VStack(spacing: 0) {
+                panelHeader
+                Divider()
+                    .overlay(Color.white.opacity(0.08))
+                ConfigureView()
             }
-            .padding(.horizontal, 44)
-            .padding(.vertical, 42)
         }
-        .frame(maxWidth: 860, minHeight: 440)
+        .frame(maxWidth: 980, minHeight: 620, maxHeight: 760)
         .padding(.horizontal, 24)
+    }
+
+    var panelHeader: some View {
+        VStack(spacing: 12) {
+            brandedTitle(fontSize: 36)
+
+            Text("Simulation Control Panel")
+                .font(.headline)
+                .foregroundStyle(.white.opacity(0.92))
+
+            Text("Adjust operating parameters locally in Apple Vision Pro before connecting them to the Omniverse simulation workflow.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.70))
+                .frame(maxWidth: 620)
+        }
+        .padding(.horizontal, 28)
+        .padding(.top, 26)
+        .padding(.bottom, 18)
     }
 
     // MARK: - Bottom Ornament
@@ -308,10 +284,20 @@ struct OmniConfigurator: View {
         HStack(spacing: 16) {
             Button {
                 section = .configure
+                showDebugPopup = false
             } label: {
                 brandedTitle(fontSize: 20)
             }
             .selectedStyle(isSelected: section == .configure)
+
+            Button {
+                section = .environment
+                showDebugPopup = false
+            } label: {
+                Label("Environment", systemImage: "globe.americas.fill")
+                    .foregroundStyle(.white)
+            }
+            .selectedStyle(isSelected: section == .environment)
 
             Button {
                 showDebugPopup = true
