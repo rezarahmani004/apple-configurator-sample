@@ -7,17 +7,14 @@
 // disclosure or distribution of this material and related documentation
 // without an express license agreement from NVIDIA CORPORATION or
 // its affiliates is strictly prohibited.
-
+ 
 import SwiftUI
 import CloudXRKit
 import os.log
 
-// A simple message handler that executes a closure when a message is received from the server.
-class IncomingMessageListener: ServerMessageListener {
+class IncomingMessageListener {
     var messageCounter = 0
-    var onMessageHandler = { (message: String) -> Void in
-        // Replace with custom handler.
-    }
+    var onMessageHandler = { (_ message: String) -> Void in }
 
     func onMessageReceived(message: Data) {
         messageCounter += 1
@@ -27,52 +24,153 @@ class IncomingMessageListener: ServerMessageListener {
 
 struct ServerActionsView: View {
     static var logger = Logger()
-    // Messages are sent via MessageChannel of the session in appModel.
+
     @Environment(AppModel.self) var appModel
 
-    @State var lastMessageSent: String = ""
-    @State var lastMessageReceived: String = ""
+    @State private var lastMessageSent: String = ""
+    @State private var lastMessageReceived: String = ""
 
     @Binding var currentChannelSelection: ChannelInfo?
     @Binding var currentChannel: MessageChannel?
 
-    // Dispatcher is provided by the parent to keep it alive across tabs.
     var messageDispatcher: ServerMessageDispatcher
-    @State var incomingMessageListener = IncomingMessageListener()
+    @State private var incomingMessageListener = IncomingMessageListener()
 
-    func sendMessage(message: String) {
-        guard let channelSelection = currentChannelSelection else {
+    // MARK: - CloudXR JSON builder
+
+    private func buildMessage(type: String, payload: [String: Any] = [:]) -> String? {
+        let message: [String: Any] = [
+            "type": type,
+            "payload": payload
+        ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: message, options: []),
+              let jsonString = String(data: data, encoding: .utf8) else {
+            Self.logger.error("Failed to serialize JSON message for type: \(type)")
+            return nil
+        }
+
+        return jsonString
+    }
+
+    // MARK: - Channel helpers
+
+    private var hasSelectedChannel: Bool {
+        currentChannelSelection != nil
+    }
+
+    private var selectedChannelStatusText: String {
+        if let channel = currentChannel {
+            return String(describing: channel.status)
+        }
+        return "N/A"
+    }
+
+    private func autoSelectFirstAvailableChannel(from session: Session) {
+        guard currentChannelSelection == nil else { return }
+        guard let firstChannelInfo = session.availableMessageChannels.first else { return }
+        guard let firstChannel = session.getMessageChannel(firstChannelInfo) else { return }
+
+        currentChannelSelection = firstChannelInfo
+        currentChannel = firstChannel
+    }
+
+    // MARK: - Send helpers
+
+    private func sendMessage(message: String) {
+        guard hasSelectedChannel else {
             Self.logger.warning("No channel selected")
-            lastMessageSent = "Error - no channel"
+            lastMessageSent = "Error - no channel selected"
             return
         }
 
         guard let messageData = message.data(using: .utf8) else {
             Self.logger.warning("String message could not be converted to data")
-            lastMessageSent = "Error"
+            lastMessageSent = "Error - invalid message encoding"
             return
         }
 
-        if let channel = currentChannel {
-            if channel.sendServerMessage(messageData) {
-                lastMessageSent = message
-            } else {
-                Self.logger.warning("Failed to send message via current channel")
-                lastMessageSent = "Error - failed to send"
-            }
-        } else {
+        guard let channel = currentChannel else {
             Self.logger.warning("No current channel available for send")
-            lastMessageSent = "Error - no channel"
+            lastMessageSent = "Error - current channel unavailable"
+            return
+        }
+
+        if channel.sendServerMessage(messageData) {
+            lastMessageSent = message
+            Self.logger.info("Sent CloudXR message successfully")
+        } else {
+            Self.logger.warning("Failed to send message via current channel")
+            lastMessageSent = "Error - failed to send"
         }
     }
 
+    private func sendStructuredMessage(type: String, payload: [String: Any] = [:]) {
+        guard let json = buildMessage(type: type, payload: payload) else {
+            lastMessageSent = "Error - failed to build JSON"
+            return
+        }
+
+        sendMessage(message: json)
+    }
+
+    // MARK: - Test actions aligned with Omniverse extension
+
+    private func sendSetSimulationInputsTest() {
+        sendStructuredMessage(
+            type: "setSimulationInputs",
+            payload: [
+                "P_IT_rack": 12000.0,
+                "Altitude": 500.0,
+                "T_Ambient": 298.0,
+                "Fan_Speed": 0.70,
+                "Auto_Actions": true,
+                "source": "visionOS",
+                "schemaVersion": "1"
+            ]
+        )
+    }
+
+    private func sendRunSteadyStateTest() {
+        sendStructuredMessage(
+            type: "runSteadyState",
+            payload: [
+                "source": "visionOS",
+                "schemaVersion": "1"
+            ]
+        )
+    }
+
+    private func sendStartTransientTest() {
+        sendStructuredMessage(
+            type: "startTransient",
+            payload: [
+                "source": "visionOS",
+                "schemaVersion": "1"
+            ]
+        )
+    }
+
+    private func sendStopTransientTest() {
+        sendStructuredMessage(
+            type: "stopTransient",
+            payload: [
+                "source": "visionOS",
+                "schemaVersion": "1"
+            ]
+        )
+    }
+
+    // MARK: - View
+
     var body: some View {
         Form {
-            VStack {
+            VStack(spacing: 16) {
                 if let session = appModel.session {
                     Picker("Channels", selection: $currentChannelSelection) {
                         ForEach(session.availableMessageChannels, id: \.self) { channelInfo in
-                            Text("Channel [\(channelInfo.uuid.map { String($0) }.joined(separator: ","))]").tag(channelInfo as ChannelInfo?)
+                            Text("Channel [\(channelInfo.uuid.map { String($0) }.joined(separator: ","))]")
+                                .tag(channelInfo as ChannelInfo?)
                         }
                         Text("None").tag(nil as ChannelInfo?)
                     }
@@ -81,81 +179,102 @@ struct ServerActionsView: View {
                     .onChange(of: currentChannelSelection) {
                         currentChannel = nil
 
-                        guard let channelSelection = currentChannelSelection else {
+                        guard let selectedChannel = currentChannelSelection else {
                             return
                         }
-                        guard let channel = session.getMessageChannel(channelSelection) else {
+
+                        guard let channel = session.getMessageChannel(selectedChannel) else {
                             return
                         }
 
                         currentChannel = channel
                     }
                     .onChange(of: session.availableMessageChannels) {
-                        if let channelSelection = currentChannelSelection,
-                           !session.availableMessageChannels.contains(channelSelection)
-                        {
+                        if let selectedChannel = currentChannelSelection,
+                           !session.availableMessageChannels.contains(selectedChannel) {
                             currentChannelSelection = nil
+                            currentChannel = nil
                         }
+
+                        autoSelectFirstAvailableChannel(from: session)
                     }
 
-                    if let channel = currentChannel {
-                        Text("Status: \(channel.status.rawValue)")
-                    } else {
-                        Text("Status: N/A")
-                    }
+                    Text("Status: \(selectedChannelStatusText)")
+                    Text("Available channels: \(session.availableMessageChannels.count)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("No CloudXR session")
+                        .foregroundStyle(.red)
                 }
 
                 Divider()
 
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button("Action 1") {
-                            sendMessage(message: "Action 1")
-                        }
-                        .disabled(currentChannelSelection == nil)
-                        .buttonStyle(.borderedProminent)
-                        Spacer()
-                        Button("Action 2") {
-                            sendMessage(message: "Action 2")
-                        }
-                        .disabled(currentChannelSelection == nil)
-                        .buttonStyle(.borderedProminent)
-                        Spacer()
+                VStack(spacing: 12) {
+                    Text("Omniverse / Flownex Test Actions")
+                        .font(.headline)
+
+                    Button("Send setSimulationInputs") {
+                        sendSetSimulationInputsTest()
                     }
+                    .disabled(!hasSelectedChannel)
+                    .buttonStyle(.borderedProminent)
+
+                    Button("Send runSteadyState") {
+                        sendRunSteadyStateTest()
+                    }
+                    .disabled(!hasSelectedChannel)
+                    .buttonStyle(.borderedProminent)
+
+                    Button("Send startTransient") {
+                        sendStartTransientTest()
+                    }
+                    .disabled(!hasSelectedChannel)
+                    .buttonStyle(.borderedProminent)
+
+                    Button("Send stopTransient") {
+                        sendStopTransientTest()
+                    }
+                    .disabled(!hasSelectedChannel)
+                    .buttonStyle(.borderedProminent)
                 }
+
                 Divider()
-                VStack {
-                    Text("Last message sent: ")
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Last message sent:")
                     Divider()
-                    Text(lastMessageSent)
+                    Text(lastMessageSent.isEmpty ? "None" : lastMessageSent)
+                        .textSelection(.enabled)
                     Spacer()
                 }
+
                 Divider()
-                VStack {
+
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Last message received:")
                     Divider()
-                    Text(lastMessageReceived)
+                    Text(lastMessageReceived.isEmpty ? "None" : lastMessageReceived)
+                        .textSelection(.enabled)
                     Spacer()
                 }
             }
         }
         .onAppear {
             guard let session = appModel.session else {
-                Self.logger.warning("Cannot send message before initialization")
+                Self.logger.warning("Cannot use ServerActionsView before initialization")
                 return
             }
-            // Update the lastMessageReceived when a message is received from the server so that it can be displayed.
-            // In general, these messages can be used to trigger local actions on the client.
+
+            autoSelectFirstAvailableChannel(from: session)
+
             incomingMessageListener.onMessageHandler = { [self] message in
                 lastMessageReceived = message
             }
-
-            // Bind the message dispatcher.
-            messageDispatcher.attach(incomingMessageListener)
         }
         .onDisappear {
-            messageDispatcher.detach(incomingMessageListener)
+            // No dispatcher detach call here because the current dispatcher API
+            // in this project does not expose a detach(...) method.
         }
     }
 }
@@ -165,6 +284,11 @@ struct ServerActionsView: View {
     @Previewable @State var selection: ChannelInfo? = nil
     @Previewable @State var channel: MessageChannel? = nil
     @Previewable @State var dispatcher = ServerMessageDispatcher()
-    ServerActionsView(currentChannelSelection: $selection, currentChannel: $channel, messageDispatcher: dispatcher)
-        .environment(appModel)
+
+    ServerActionsView(
+        currentChannelSelection: $selection,
+        currentChannel: $channel,
+        messageDispatcher: dispatcher
+    )
+    .environment(appModel)
 }

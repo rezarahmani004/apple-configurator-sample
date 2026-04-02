@@ -1,12 +1,5 @@
 // SPDX-FileCopyrightText: Copyright (c) 2023-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 // SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-//
-// NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
-// property and proprietary rights in and to this material, related
-// documentation and any modifications thereto. Any use, reproduction,
-// disclosure or distribution of this material and related documentation
-// without an express license agreement from NVIDIA CORPORATION or
-// its affiliates is strictly prohibited.
 
 import Foundation
 import CloudXRKit
@@ -15,19 +8,33 @@ import CloudXRKit
 class ConfiguratorAppModel {
     static var omniverseMessageDispatcher = ServerMessageDispatcher()
 
+    private let maxSendAttempts = 24
+    private let sendRetryDelay: TimeInterval = 0.25
+
     var session: Session? {
         get { asset.stateManager.session }
         set {
             asset.stateManager.session = newValue
             Self.omniverseMessageDispatcher.session = newValue
-            Self.omniverseMessageDispatcher.attach(asset.stateManager)
+
+            if newValue != nil {
+                Self.omniverseMessageDispatcher.attach(asset.stateManager)
+            }
+
+            log(
+                """
+                Session updated.
+                sessionIsNil=\(newValue == nil)
+                availableChannels=\(newValue?.availableMessageChannels.count ?? 0)
+                """
+            )
         }
     }
 
     var asset: AssetModel = GenericSceneAsset()
+    var gestureHelper: GestureHelper?
 
-    // simplifying wrapper methods for asset.stateManager; ideally nobody needs to know about
-    // OmniverseStateManager
+    // MARK: - Basic wrappers
 
     func desiredState(_ key: String) -> (any MessageProtocol)? {
         asset.stateManager.desiredState(key)
@@ -37,8 +44,82 @@ class ConfiguratorAppModel {
         asset.stateManager.isAwaitingCompletion(stateKey)
     }
 
+    var isCloudXRReady: Bool {
+        asset.stateManager.session != nil
+    }
+
+    var availableMessageChannelCount: Int {
+        asset.stateManager.session?.availableMessageChannels.count ?? 0
+    }
+
+    var hasAvailableMessageChannel: Bool {
+        availableMessageChannelCount > 0
+    }
+
+    private func log(_ text: String) {
+        print("[ConfiguratorAppModel] \(text)")
+    }
+
+    // MARK: - Compatibility send wrapper
+
     func send(_ message: any MessageProtocol) {
-        asset.stateManager.send(message)
+        sendWhenMessageChannelReady(message, label: "generic")
+    }
+
+    private func sendDirectlyOverCloudXR(_ message: any MessageProtocol, label: String) {
+        sendWhenMessageChannelReady(message, label: label)
+    }
+
+    // MARK: - Reliable CloudXR send
+
+    private func sendWhenMessageChannelReady(
+        _ message: any MessageProtocol,
+        label: String,
+        attempt: Int = 0
+    ) {
+        guard isCloudXRReady else {
+            log("BLOCKED: CloudXR session is nil. Command not sent: \(label)")
+            return
+        }
+
+        if hasAvailableMessageChannel {
+            if attempt == 0 {
+                log("Sending via CloudXR channel: \(label)")
+            } else {
+                log("Channel became available after \(attempt) retry(s). Sending: \(label)")
+            }
+
+            asset.stateManager.send(message)
+            return
+        }
+
+        if attempt >= maxSendAttempts {
+            log(
+                """
+                BLOCKED: Message channel never became ready.
+                Command not sent: \(label)
+                attempts=\(attempt)
+                """
+            )
+            return
+        }
+
+        if attempt == 0 {
+            log(
+                """
+                CloudXR session exists but no message channels are available yet.
+                Retrying command: \(label)
+                """
+            )
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + sendRetryDelay) { [weak self] in
+            self?.sendWhenMessageChannelReady(
+                message,
+                label: label,
+                attempt: attempt + 1
+            )
+        }
     }
 
     // MARK: - Simulation Messaging Helpers
@@ -57,7 +138,19 @@ class ConfiguratorAppModel {
             Fan_Speed: Fan_Speed,
             Auto_Actions: Auto_Actions
         )
-        send(message)
+
+        log(
+            """
+            Preparing setSimulationInputs:
+              P_IT_rack=\(P_IT_rack)
+              Altitude=\(Altitude)
+              T_Ambient=\(T_Ambient)
+              Fan_Speed=\(Fan_Speed)
+              Auto_Actions=\(Auto_Actions)
+            """
+        )
+
+        sendDirectlyOverCloudXR(message, label: "setSimulationInputs")
     }
 
     func sendSimulationInputs(from configuratorViewModel: ConfiguratorViewModel) {
@@ -71,32 +164,41 @@ class ConfiguratorAppModel {
     }
 
     func sendRunSteadyState() {
-        send(RunSteadyStateMessage())
+        let message = RunSteadyStateMessage()
+        log("Preparing runSteadyState")
+        sendDirectlyOverCloudXR(message, label: "runSteadyState")
     }
 
     func sendStartTransient() {
-        send(StartTransientMessage())
+        let message = StartTransientMessage()
+        log("Preparing startTransient")
+        sendDirectlyOverCloudXR(message, label: "startTransient")
     }
 
     func sendStopTransient() {
-        send(StopTransientMessage())
+        let message = StopTransientMessage()
+        log("Preparing stopTransient")
+        sendDirectlyOverCloudXR(message, label: "stopTransient")
     }
 
-    var gestureHelper: GestureHelper?
+    // MARK: - Setup
 
-    func setup(application: Application, configuratorViewModel: ConfiguratorViewModel, session: Session) {
+    func setup(
+        application: Application,
+        configuratorViewModel: ConfiguratorViewModel,
+        session: Session
+    ) {
         switch application {
-
-        case Application.generic_scene:
+        case .generic_scene:
             asset = GenericSceneAsset()
-        default:
-            fatalError("Unknown application type")
         }
 
-        if let configuratorViewModel = asset.configuratorViewModel {
-            configuratorViewModel.lightIntensity = (asset.lightnessRange.upperBound - asset.lightnessRange.lowerBound) / 2.0
-            configuratorViewModel.currentViewing = asset.makeViewingModel(.portal)
+        if let assetConfiguratorViewModel = asset.configuratorViewModel {
+            assetConfiguratorViewModel.lightIntensity =
+                (asset.lightnessRange.upperBound - asset.lightnessRange.lowerBound) / 2.0
+            assetConfiguratorViewModel.currentViewing = asset.makeViewingModel(.portal)
         }
+
         asset.configuratorViewModel = configuratorViewModel
 
         gestureHelper = GestureHelper(
@@ -105,5 +207,13 @@ class ConfiguratorAppModel {
         )
 
         self.session = session
+
+        log(
+            """
+            Setup completed.
+            CloudXR ready=\(isCloudXRReady)
+            availableChannels=\(availableMessageChannelCount)
+            """
+        )
     }
 }

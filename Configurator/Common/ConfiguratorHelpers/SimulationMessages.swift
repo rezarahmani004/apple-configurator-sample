@@ -10,11 +10,41 @@
 
 import Foundation
 
-// MARK: - Payload Dictionaries
+// MARK: - Shared constants
+
+enum SimulationMessageType {
+    static let setSimulationInputs = "setSimulationInputs"
+    static let runSteadyState = "runSteadyState"
+    static let startTransient = "startTransient"
+    static let stopTransient = "stopTransient"
+}
+
+enum SimulationMessageKey {
+    static let source = "source"
+    static let schemaVersion = "schemaVersion"
+
+    static let pItRack = "P_IT_rack"
+    static let altitude = "Altitude"
+    static let tAmbient = "T_Ambient"
+    static let fanSpeed = "Fan_Speed"
+    static let autoActions = "Auto_Actions"
+}
+
+// MARK: - CloudXR / Kit Message Bus Dictionaries
+//
+// IMPORTANT:
+// CloudXR 6 / Kit message bus expects:
+// {
+//   "type": "...",
+//   "payload": { ... }
+// }
+//
+// So the payload dictionary must ONLY contain the payload fields.
+// The event name itself is provided separately by `type`.
 
 public struct SetSimulationInputsMessageDictionary: MessageDictionary {
     public let message: [String: String]
-    public let type = "setSimulationInputs"
+    public let type = SimulationMessageType.setSimulationInputs
 
     public init(
         P_IT_rack: Double,
@@ -24,44 +54,49 @@ public struct SetSimulationInputsMessageDictionary: MessageDictionary {
         Auto_Actions: Bool
     ) {
         message = [
-            "P_IT_rack": String(Int(P_IT_rack)),
-            "Altitude": String(Int(Altitude)),
-            "T_Ambient": String(Int(T_Ambient)),
-            "Fan_ Speed": String(Int(Fan_Speed)),
-            "Auto_Actions": Auto_Actions ? "yes" : "no"
+            SimulationMessageKey.source: "visionOS",
+            SimulationMessageKey.schemaVersion: "1",
+            SimulationMessageKey.pItRack: String(P_IT_rack),
+            SimulationMessageKey.altitude: String(Altitude),
+            SimulationMessageKey.tAmbient: String(T_Ambient),
+            SimulationMessageKey.fanSpeed: String(Fan_Speed),
+            SimulationMessageKey.autoActions: Auto_Actions ? "true" : "false"
         ]
     }
 }
 
 public struct RunSteadyStateMessageDictionary: MessageDictionary {
     public let message: [String: String]
-    public let type = "runSteadyState"
+    public let type = SimulationMessageType.runSteadyState
 
     public init() {
         message = [
-            "command": "runSteadyState"
+            SimulationMessageKey.source: "visionOS",
+            SimulationMessageKey.schemaVersion: "1"
         ]
     }
 }
 
 public struct StartTransientMessageDictionary: MessageDictionary {
     public let message: [String: String]
-    public let type = "startTransient"
+    public let type = SimulationMessageType.startTransient
 
     public init() {
         message = [
-            "command": "startTransient"
+            SimulationMessageKey.source: "visionOS",
+            SimulationMessageKey.schemaVersion: "1"
         ]
     }
 }
 
 public struct StopTransientMessageDictionary: MessageDictionary {
     public let message: [String: String]
-    public let type = "stopTransient"
+    public let type = SimulationMessageType.stopTransient
 
     public init() {
         message = [
-            "command": "stopTransient"
+            SimulationMessageKey.source: "visionOS",
+            SimulationMessageKey.schemaVersion: "1"
         ]
     }
 }

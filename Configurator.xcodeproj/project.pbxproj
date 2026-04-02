@@ -54,7 +54,6 @@
 		9CAEE0ED2D307CF90030E3F6 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 01AFA4712BF7D954004B6F6B /* Preview Assets.xcassets */; };
 		9CAEE0EE2D307CF90030E3F6 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 01AFA44B2BF7D8C5004B6F6B /* Settings.bundle */; };
 		9CAEE0EF2D307CF90030E3F6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 01AFA43D2BF7D8C5004B6F6B /* Assets.xcassets */; };
-		9CAEE0F82D3082160030E3F6 /* CombinedViewer-visionOS-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 9CAEE0F72D3082160030E3F6 /* CombinedViewer-visionOS-Info.plist */; };
 		9CC51E182D308742003A1CF0 /* Color+hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC51E172D308742003A1CF0 /* Color+hex.swift */; };
 		9CC51E192D308742003A1CF0 /* Color+hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC51E172D308742003A1CF0 /* Color+hex.swift */; };
 		A725B0302C6EC005000248FE /* StarRatingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A725B02F2C6EC005000248FE /* StarRatingView.swift */; };
@@ -414,7 +413,6 @@
 				01AFA4732BF7D954004B6F6B /* Preview Assets.xcassets in Resources */,
 				01AFA4672BF7D8C5004B6F6B /* Settings.bundle in Resources */,
 				9C981CE92D30968500C3A953 /* Assets.xcassets in Resources */,
-				9CAEE0F82D3082160030E3F6 /* CombinedViewer-visionOS-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
