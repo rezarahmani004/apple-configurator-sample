@@ -129,7 +129,10 @@ public class OmniverseStateManager : ServerMessageListener {
                     continue
                 } else {
                     Self.logger.info("Sending state to server: \(state.desiredState.encodable.message.description)")
-                    let messageData = encodeJSON(state.desiredState.encodable)
+                    guard let messageData = state.desiredState.encodable.cloudXRData() else {
+                        Self.logger.error("Failed to encode CloudXR state message for \(stateName)")
+                        continue
+                    }
                     // Note that this sends the message to the first available channel and we assume the application
                     // creates the first channel to receive client UI messages.
                     if ConfiguratorAppModel.omniverseMessageDispatcher.sendMessage(messageData) {
@@ -149,11 +152,36 @@ public class OmniverseStateManager : ServerMessageListener {
     }
 
     public func send(_ message: any MessageProtocol) {
-        guard session != nil else { return }
-        Self.logger.info("Sending message to server: \(message.encodable.message.description)")
-        let messageData = encodeJSON(message.encodable)
-        if !ConfiguratorAppModel.omniverseMessageDispatcher.sendMessage(messageData) {
-            Self.logger.error("Failed to send message: \(message.encodable.message.description)")
+        guard let session = session else {
+            Self.logger.warning("[SIM WARN] send: session nil — message dropped")
+            return
+        }
+
+        let encodable = message.encodable
+        print("[SIM SEND] Built message type=\(encodable.type)")
+
+        let channels = session.availableMessageChannels
+        print("[SIM SEND] availableChannels=\(channels.count)")
+
+        guard let channelInfo = channels.first,
+              let channel = session.getMessageChannel(channelInfo) else {
+            Self.logger.warning("[SIM WARN] channel not ready — no available channel for type=\(encodable.type)")
+            return
+        }
+
+        guard let data = encodable.cloudXRData() else {
+            Self.logger.error("[SIM ERROR] Failed to encode CloudXR message type=\(encodable.type)")
+            return
+        }
+
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("[SIM SEND] JSON: \(jsonString)")
+        }
+
+        if channel.sendServerMessage(data) {
+            print("[SIM SEND] send success type=\(encodable.type)")
+        } else {
+            Self.logger.error("[SIM ERROR] channel.sendServerMessage failed type=\(encodable.type)")
         }
     }
 
@@ -170,6 +198,8 @@ public class OmniverseStateManager : ServerMessageListener {
     }
 
     public func onMessageReceived(message: Data) {
+        let text = String(data: message, encoding: .utf8) ?? "<non-UTF8 data, \(message.count) bytes>"
+        print("[SIM RECV] incoming server message: \(text)")
         if let asset, let decodedMessage = try? JSONSerialization.jsonObject(with: message, options: .mutableContainers) as? [String: String] {
             if decodedMessage["Type"] == asset.switchVariantCompleteType,
                let variantName = decodedMessage[asset.variantSetNameField] {

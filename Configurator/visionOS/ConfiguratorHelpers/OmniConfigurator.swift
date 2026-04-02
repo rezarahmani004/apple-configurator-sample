@@ -330,11 +330,16 @@ struct OmniConfigurator: View {
                             showDebugPopup = false
                         }
                         .selectedStyle(isSelected: section == .hud)
+
+                        Button("Test Sim Messages") {
+                            configuratorAppModel.debugSendTestMessages()
+                            showDebugPopup = false
+                        }
                     }
                 }
                 .formStyle(.grouped)
                 .padding(.vertical)
-                .frame(width: 300, height: showDebugUI ? 150 : 95)
+                .frame(width: 300, height: showDebugUI ? 200 : 95)
             }
         }
         .padding(.horizontal, 18)

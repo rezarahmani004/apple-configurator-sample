@@ -212,6 +212,7 @@ private extension ConfigureView {
                 .buttonStyle(.bordered)
 
                 Button("Apply") {
+                    print("[SIM UI] Apply tapped")
                     configuratorAppModel.sendSimulationInputs(from: configuratorViewModel)
                     configuratorViewModel.applySimulationInputsLocally()
                 }
@@ -220,18 +221,21 @@ private extension ConfigureView {
 
             HStack(spacing: 12) {
                 Button("Run Steady State") {
+                    print("[SIM UI] Run Steady State tapped")
                     configuratorAppModel.sendRunSteadyState()
                     configuratorViewModel.markSteadyStateRequested()
                 }
                 .buttonStyle(.borderedProminent)
 
                 Button("Start Transient") {
+                    print("[SIM UI] Start Transient tapped")
                     configuratorAppModel.sendStartTransient()
                     configuratorViewModel.markTransientStartRequested()
                 }
                 .buttonStyle(.borderedProminent)
 
                 Button("Stop Transient") {
+                    print("[SIM UI] Stop Transient tapped")
                     configuratorAppModel.sendStopTransient()
                     configuratorViewModel.markTransientStopRequested()
                 }

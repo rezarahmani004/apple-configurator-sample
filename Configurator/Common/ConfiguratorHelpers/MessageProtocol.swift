@@ -12,6 +12,31 @@ public protocol MessageDictionary: Encodable, Equatable {
     associatedtype Parameter
     var message: [String: Parameter] { get }
     var type: String { get }
+
+    /// Encodes this message in CloudXR 6 / Kit message bus format:
+    /// `{ "type": "...", "payload": { ... } }`
+    /// String-encoded numbers and booleans are coerced to their native JSON types.
+    func cloudXRData() -> Data?
+}
+
+extension MessageDictionary {
+    public func cloudXRData() -> Data? {
+        var payload: [String: Any] = [:]
+        for (key, value) in message {
+            let str = "\(value)"
+            if let d = Double(str) {
+                payload[key] = d
+            } else if str == "true" {
+                payload[key] = true
+            } else if str == "false" {
+                payload[key] = false
+            } else {
+                payload[key] = str
+            }
+        }
+        let wrapper: [String: Any] = ["type": type, "payload": payload]
+        return try? JSONSerialization.data(withJSONObject: wrapper)
+    }
 }
 
 public struct BaseMessageDictionary: MessageDictionary {

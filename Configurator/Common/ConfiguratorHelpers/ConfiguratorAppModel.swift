@@ -23,9 +23,10 @@ class ConfiguratorAppModel {
 
             log(
                 """
-                Session updated.
-                sessionIsNil=\(newValue == nil)
+                [SIM SEND] Session updated.
+                session exists=\(newValue != nil)
                 availableChannels=\(newValue?.availableMessageChannels.count ?? 0)
+                canSendSimulationCommands=\(newValue != nil && (newValue?.availableMessageChannels.count ?? 0) > 0)
                 """
             )
         }
@@ -56,6 +57,10 @@ class ConfiguratorAppModel {
         availableMessageChannelCount > 0
     }
 
+    var canSendSimulationCommands: Bool {
+        isCloudXRReady && hasAvailableMessageChannel
+    }
+
     private func log(_ text: String) {
         print("[ConfiguratorAppModel] \(text)")
     }
@@ -78,39 +83,32 @@ class ConfiguratorAppModel {
         attempt: Int = 0
     ) {
         guard isCloudXRReady else {
-            log("BLOCKED: CloudXR session is nil. Command not sent: \(label)")
+            print("[SIM ERROR] session nil — command not sent: \(label)")
             return
         }
 
         if hasAvailableMessageChannel {
-            if attempt == 0 {
-                log("Sending via CloudXR channel: \(label)")
-            } else {
+            if attempt > 0 {
                 log("Channel became available after \(attempt) retry(s). Sending: \(label)")
             }
-
+            // Sync dispatcher channel availability before delegating to stateManager
+            Self.omniverseMessageDispatcher.refreshChannelAvailability()
             asset.stateManager.send(message)
             return
         }
 
         if attempt >= maxSendAttempts {
-            log(
+            print(
                 """
-                BLOCKED: Message channel never became ready.
-                Command not sent: \(label)
-                attempts=\(attempt)
+                [SIM ERROR] channel never ready after \(attempt) attempts — command dropped: \(label)
+                session exists=\(isCloudXRReady) availableChannels=\(availableMessageChannelCount)
                 """
             )
             return
         }
 
         if attempt == 0 {
-            log(
-                """
-                CloudXR session exists but no message channels are available yet.
-                Retrying command: \(label)
-                """
-            )
+            print("[SIM WARN] channel not ready (availableChannels=\(availableMessageChannelCount)) — retrying: \(label)")
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + sendRetryDelay) { [weak self] in
@@ -139,16 +137,16 @@ class ConfiguratorAppModel {
             Auto_Actions: Auto_Actions
         )
 
-        log(
+        print(
             """
-            Preparing setSimulationInputs:
-              P_IT_rack=\(P_IT_rack)
-              Altitude=\(Altitude)
-              T_Ambient=\(T_Ambient)
-              Fan_Speed=\(Fan_Speed)
-              Auto_Actions=\(Auto_Actions)
+            [SIM SEND] Built message type=setSimulationInputs \
+            P_IT_rack=\(P_IT_rack) Altitude=\(Altitude) T_Ambient=\(T_Ambient) \
+            Fan_Speed=\(Fan_Speed) Auto_Actions=\(Auto_Actions)
             """
         )
+        print("[SIM SEND] session exists=\(isCloudXRReady)")
+        print("[SIM SEND] availableChannels=\(availableMessageChannelCount)")
+        print("[SIM SEND] canSendSimulationCommands=\(canSendSimulationCommands)")
 
         sendDirectlyOverCloudXR(message, label: "setSimulationInputs")
     }
@@ -165,20 +163,41 @@ class ConfiguratorAppModel {
 
     func sendRunSteadyState() {
         let message = RunSteadyStateMessage()
-        log("Preparing runSteadyState")
+        print("[SIM SEND] Built message type=runSteadyState")
+        print("[SIM SEND] session exists=\(isCloudXRReady) availableChannels=\(availableMessageChannelCount)")
         sendDirectlyOverCloudXR(message, label: "runSteadyState")
     }
 
     func sendStartTransient() {
         let message = StartTransientMessage()
-        log("Preparing startTransient")
+        print("[SIM SEND] Built message type=startTransient")
+        print("[SIM SEND] session exists=\(isCloudXRReady) availableChannels=\(availableMessageChannelCount)")
         sendDirectlyOverCloudXR(message, label: "startTransient")
     }
 
     func sendStopTransient() {
         let message = StopTransientMessage()
-        log("Preparing stopTransient")
+        print("[SIM SEND] Built message type=stopTransient")
+        print("[SIM SEND] session exists=\(isCloudXRReady) availableChannels=\(availableMessageChannelCount)")
         sendDirectlyOverCloudXR(message, label: "stopTransient")
+    }
+
+    // MARK: - Debug test utility
+
+    /// Sends one setSimulationInputs and one runSteadyState message for diagnostic purposes.
+    /// Call from the debug menu after channel readiness is confirmed.
+    func debugSendTestMessages() {
+        print("[SIM DEBUG] debugSendTestMessages: canSend=\(canSendSimulationCommands) session=\(isCloudXRReady) channels=\(availableMessageChannelCount)")
+        sendSimulationInputs(
+            P_IT_rack: 12000,
+            Altitude: 500,
+            T_Ambient: 298,
+            Fan_Speed: 0.7,
+            Auto_Actions: true
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.sendRunSteadyState()
+        }
     }
 
     // MARK: - Setup
