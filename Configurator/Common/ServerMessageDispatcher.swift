@@ -39,31 +39,30 @@ final class ServerMessageDispatcher {
     }
 
     func refreshChannelAvailability() {
-        // Conservative default for now:
-        // until your real channel-availability callback is wired,
-        // keep this false so nothing claims the channel is ready.
-        hasAvailableChannels = false
-
-        if hasAvailableChannels {
-            print("✅ Message channel available.")
-        } else {
-            print("No message channels available.")
-        }
-
+        let channelCount = session?.availableMessageChannels.count ?? 0
+        hasAvailableChannels = channelCount > 0
+        print("[SIM CONNECT] availableChannels=\(channelCount)")
         listener?.serverMessageDispatcherDidUpdateChannels(self)
     }
 
     @discardableResult
     func sendMessage(_ text: String) -> Bool {
-        guard hasAvailableChannels else {
-            print("Channel [first available] not ready - queued message")
+        guard let session = session,
+              let firstChannelInfo = session.availableMessageChannels.first,
+              let channel = session.getMessageChannel(firstChannelInfo) else {
+            print("[SIM WARN] no message channel available")
             queuedMessages.append(text)
             return false
         }
 
-        print("Sending raw text message to server: \(text)")
-        // Hook your real CloudXR send here later
-        return true
+        guard let data = text.data(using: .utf8) else {
+            print("[SIM ERROR] message encoding failed, cannot send")
+            return false
+        }
+
+        let success = channel.sendServerMessage(data)
+        print(success ? "[SIM SEND] send success" : "[SIM SEND] send failed")
+        return success
     }
 
     @discardableResult

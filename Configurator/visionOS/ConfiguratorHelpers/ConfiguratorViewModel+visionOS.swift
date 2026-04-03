@@ -54,7 +54,7 @@ class ConfiguratorViewModel: Placeable {
     let key_P_IT_rack = "P_IT_rack"
     let key_Altitude = "Altitude"
     let key_T_Ambient = "T_Ambient"
-    let key_Fan_Speed = "Fan_ Speed"
+    let key_Fan_Speed = "Fan_Speed"
     let key_Auto_Actions = "Auto_Actions"
 
     // MARK: - Simulation Inputs

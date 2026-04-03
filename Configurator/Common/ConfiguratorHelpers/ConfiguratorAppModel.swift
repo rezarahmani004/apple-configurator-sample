@@ -21,13 +21,8 @@ class ConfiguratorAppModel {
                 Self.omniverseMessageDispatcher.attach(asset.stateManager)
             }
 
-            log(
-                """
-                Session updated.
-                sessionIsNil=\(newValue == nil)
-                availableChannels=\(newValue?.availableMessageChannels.count ?? 0)
-                """
-            )
+            let channelCount = newValue?.availableMessageChannels.count ?? 0
+            print("[SIM CONNECT] availableChannels=\(channelCount) sessionIsNil=\(newValue == nil)")
         }
     }
 
@@ -78,39 +73,25 @@ class ConfiguratorAppModel {
         attempt: Int = 0
     ) {
         guard isCloudXRReady else {
-            log("BLOCKED: CloudXR session is nil. Command not sent: \(label)")
+            print("[SIM WARN] CloudXR session is nil — command not sent: \(label)")
             return
         }
 
         if hasAvailableMessageChannel {
-            if attempt == 0 {
-                log("Sending via CloudXR channel: \(label)")
-            } else {
-                log("Channel became available after \(attempt) retry(s). Sending: \(label)")
+            if attempt > 0 {
+                print("[SIM SEND] channel became available after \(attempt) retry(s), sending: \(label)")
             }
-
             asset.stateManager.send(message)
             return
         }
 
         if attempt >= maxSendAttempts {
-            log(
-                """
-                BLOCKED: Message channel never became ready.
-                Command not sent: \(label)
-                attempts=\(attempt)
-                """
-            )
+            print("[SIM WARN] no message channel available after \(attempt) attempts — command not sent: \(label)")
             return
         }
 
         if attempt == 0 {
-            log(
-                """
-                CloudXR session exists but no message channels are available yet.
-                Retrying command: \(label)
-                """
-            )
+            print("[SIM WARN] no message channel available yet, will retry: \(label)")
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + sendRetryDelay) { [weak self] in
@@ -139,16 +120,8 @@ class ConfiguratorAppModel {
             Auto_Actions: Auto_Actions
         )
 
-        log(
-            """
-            Preparing setSimulationInputs:
-              P_IT_rack=\(P_IT_rack)
-              Altitude=\(Altitude)
-              T_Ambient=\(T_Ambient)
-              Fan_Speed=\(Fan_Speed)
-              Auto_Actions=\(Auto_Actions)
-            """
-        )
+        print("[SIM SEND] Built type=setSimulationInputs payloadKeys=[P_IT_rack, Altitude, T_Ambient, Fan_Speed, Auto_Actions, source, schemaVersion]")
+        print("[SIM SEND] P_IT_rack=\(P_IT_rack) Altitude=\(Altitude) T_Ambient=\(T_Ambient) Fan_Speed=\(Fan_Speed) Auto_Actions=\(Auto_Actions)")
 
         sendDirectlyOverCloudXR(message, label: "setSimulationInputs")
     }
@@ -165,19 +138,19 @@ class ConfiguratorAppModel {
 
     func sendRunSteadyState() {
         let message = RunSteadyStateMessage()
-        log("Preparing runSteadyState")
+        print("[SIM SEND] Built type=runSteadyState")
         sendDirectlyOverCloudXR(message, label: "runSteadyState")
     }
 
     func sendStartTransient() {
         let message = StartTransientMessage()
-        log("Preparing startTransient")
+        print("[SIM SEND] Built type=startTransient")
         sendDirectlyOverCloudXR(message, label: "startTransient")
     }
 
     func sendStopTransient() {
         let message = StopTransientMessage()
-        log("Preparing stopTransient")
+        print("[SIM SEND] Built type=stopTransient")
         sendDirectlyOverCloudXR(message, label: "stopTransient")
     }
 
@@ -208,12 +181,6 @@ class ConfiguratorAppModel {
 
         self.session = session
 
-        log(
-            """
-            Setup completed.
-            CloudXR ready=\(isCloudXRReady)
-            availableChannels=\(availableMessageChannelCount)
-            """
-        )
+        print("[SIM CONNECT] session created, CloudXRReady=\(isCloudXRReady) availableChannels=\(availableMessageChannelCount)")
     }
 }
