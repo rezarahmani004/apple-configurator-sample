@@ -142,10 +142,10 @@ private extension ConfigureView {
 
     var fanSpeedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionTitle("Fan_ Speed")
+            sectionTitle("Fan_Speed")
 
             HStack {
-                Text("Fan_ Speed")
+                Text("Fan_Speed")
                 Spacer()
                 Text("\(Int(configuratorViewModel.Fan_Speed)) rpm")
                     .foregroundStyle(.secondary)
@@ -193,7 +193,7 @@ private extension ConfigureView {
             }
             .toggleStyle(.switch)
 
-            Text("Allowed values: no / yes")
+            Text("Allowed values: true / false")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

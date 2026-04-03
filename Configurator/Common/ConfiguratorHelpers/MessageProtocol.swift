@@ -17,6 +17,11 @@ public protocol MessageDictionary: Encodable, Equatable {
 public struct BaseMessageDictionary: MessageDictionary {
     public var message: [String: String] = [:]
     public var type = ""
+
+    private enum CodingKeys: String, CodingKey {
+        case message = "payload"
+        case type
+    }
 }
 
 /// Protocol to send messages to a CloudXR session via the OmniverseStateManager.

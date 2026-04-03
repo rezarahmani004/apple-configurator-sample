@@ -16,7 +16,9 @@ final class ServerMessageDispatcher {
     private weak var stateManager: OmniverseStateManager?
     weak var listener: ServerMessageListener?
 
-    private(set) var hasAvailableChannels: Bool = false
+    private(set) var hasAvailableChannels: Bool {
+        session?.availableMessageChannels.isEmpty == false
+    }
     private var queuedMessages: [String] = []
     private var isProcessingQueue = false
 
@@ -39,31 +41,55 @@ final class ServerMessageDispatcher {
     }
 
     func refreshChannelAvailability() {
-        // Conservative default for now:
-        // until your real channel-availability callback is wired,
-        // keep this false so nothing claims the channel is ready.
-        hasAvailableChannels = false
-
-        if hasAvailableChannels {
-            print("✅ Message channel available.")
-        } else {
-            print("No message channels available.")
-        }
-
+        let channelCount = session?.availableMessageChannels.count ?? 0
+        print("[SIM CONNECT] availableChannels=\(channelCount)")
         listener?.serverMessageDispatcherDidUpdateChannels(self)
+
+        if channelCount > 0 {
+            flushQueuedMessages()
+        }
+    }
+
+    private func flushQueuedMessages() {
+        guard !queuedMessages.isEmpty else { return }
+        let pending = queuedMessages
+        queuedMessages.removeAll()
+        print("[SIM SEND] flushing \(pending.count) queued message(s)")
+        for (index, text) in pending.enumerated() {
+            if !sendRaw(text) {
+                // Channel became unavailable mid-flush; re-queue the remainder
+                // at the front so ordering is preserved even if new messages
+                // arrived during the flush.
+                queuedMessages.insert(contentsOf: pending[index...], at: 0)
+                return
+            }
+        }
     }
 
     @discardableResult
     func sendMessage(_ text: String) -> Bool {
-        guard hasAvailableChannels else {
-            print("Channel [first available] not ready - queued message")
-            queuedMessages.append(text)
+        if sendRaw(text) { return true }
+        print("[SIM WARN] no message channel available")
+        queuedMessages.append(text)
+        return false
+    }
+
+    // Sends directly without queuing. Returns false if no channel is available.
+    private func sendRaw(_ text: String) -> Bool {
+        guard let session = session,
+              let firstChannelInfo = session.availableMessageChannels.first,
+              let channel = session.getMessageChannel(firstChannelInfo) else {
             return false
         }
 
-        print("Sending raw text message to server: \(text)")
-        // Hook your real CloudXR send here later
-        return true
+        guard let data = text.data(using: .utf8) else {
+            print("[SIM ERROR] message encoding failed, cannot send")
+            return false
+        }
+
+        let success = channel.sendServerMessage(data)
+        print(success ? "[SIM SEND] send success" : "[SIM SEND] send failed")
+        return success
     }
 
     @discardableResult
