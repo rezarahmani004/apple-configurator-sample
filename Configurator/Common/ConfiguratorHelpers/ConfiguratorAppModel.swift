@@ -51,10 +51,6 @@ class ConfiguratorAppModel {
         availableMessageChannelCount > 0
     }
 
-    private func log(_ text: String) {
-        print("[ConfiguratorAppModel] \(text)")
-    }
-
     // MARK: - Compatibility send wrapper
 
     func send(_ message: any MessageProtocol) {
