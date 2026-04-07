@@ -52,7 +52,6 @@ private extension ConfigureView {
             sectionTitle("P_IT_rack")
 
             HStack {
-                Text("P_IT_rack")
                 Spacer()
                 Text("\(Int(configuratorViewModel.P_IT_rack)) kW")
                     .foregroundStyle(.secondary)
@@ -83,7 +82,6 @@ private extension ConfigureView {
             sectionTitle("Altitude")
 
             HStack {
-                Text("Altitude")
                 Spacer()
                 Text("\(Int(configuratorViewModel.Altitude)) m")
                     .foregroundStyle(.secondary)
@@ -114,7 +112,6 @@ private extension ConfigureView {
             sectionTitle("T_Ambient")
 
             HStack {
-                Text("T_Ambient")
                 Spacer()
                 Text("\(Int(configuratorViewModel.T_Ambient)) °C")
                     .foregroundStyle(.secondary)
@@ -145,7 +142,6 @@ private extension ConfigureView {
             sectionTitle("Fan_Speed")
 
             HStack {
-                Text("Fan_Speed")
                 Spacer()
                 Text("\(Int(configuratorViewModel.Fan_Speed)) rpm")
                     .foregroundStyle(.secondary)
@@ -185,7 +181,6 @@ private extension ConfigureView {
                 )
             ) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Auto_Actions")
                     Text("Checkbox input from the Omniverse input definition.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
